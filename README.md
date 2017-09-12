@@ -49,8 +49,8 @@ Read the full [API](https://dvlopt.github.io/doc/bme280.clj/).
                 (bme280/compensation-works bus)
                 (bme280/raw-data           bus))
 ;; => {:temperature 23.3       ;; °C
-       :pressure    960.3223   ;; Pa
-       :humidity    46.932}    ;; %rH
+;;     :pressure    960.3223   ;; Pa
+;;     :humidity    46.932}    ;; %rH
 ```
 
 ## License
