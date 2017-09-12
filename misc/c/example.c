@@ -47,10 +47,6 @@ void main()
 		dig_T3 -= 65536;
 	}
 
-    printf( "Coefficients = %d - %d - %d\n" ,
-            dig_T1 ,
-            dig_T2 ,
-            dig_T3 ) ;
 
 	// pressure coefficents
 	int dig_P1 = (b1[6] + b1[7] * 256);
@@ -158,20 +154,16 @@ void main()
 	long adc_p = ((long)(data[0] * 65536 + ((long)(data[1] * 256) + (long)(data[2] & 0xF0)))) / 16;
 	long adc_t = ((long)(data[3] * 65536 + ((long)(data[4] * 256) + (long)(data[5] & 0xF0)))) / 16;
 
-    printf( "data = %d - %d - %d\n", data[3], data[4], data[5]) ;
-    printf( "d5 & 0x0f = %d\n" ,
-            (long)(data[5] & 0xf0)) ;
-    printf( "ADC = %d\n" ,
-            adc_t ) ;
+
 	// Convert the humidity data
 	long adc_h = (data[6] * 256 + data[7]);
+
 
 	// Temperature offset calculations
 	float var1 = (((float)adc_t) / 16384.0 - ((float)dig_T1) / 1024.0) * ((float)dig_T2);
 	float var2 = ((((float)adc_t) / 131072.0 - ((float)dig_T1) / 8192.0) *
 					(((float)adc_t)/131072.0 - ((float)dig_T1)/8192.0)) * ((float)dig_T3);
 
-    printf( "offsets = %f - %f\n", var1, var2 ) ;
 	float t_fine = (long)(var1 + var2);
 	float cTemp = (var1 + var2) / 5120.0;
 	float fTemp = cTemp * 1.8 + 32;
@@ -193,6 +185,7 @@ void main()
 	float var_H = (((float)t_fine) - 76800.0);
 	var_H = (adc_h - (dig_H4 * 64.0 + dig_H5 / 16384.0 * var_H)) * (dig_H2 / 65536.0 * (1.0 + dig_H6 / 67108864.0 * var_H * (1.0 + dig_H3 / 67108864.0 * var_H)));
 	float humidity = var_H * (1.0 -  dig_H1 * var_H / 524288.0);
+    printf( "varh = %f\n", humidity ) ;
 	if(humidity > 100.0)
 	{
 		humidity = 100.0;
