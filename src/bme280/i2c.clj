@@ -285,6 +285,8 @@
           8        | 11
          16        | 22
 
+   <!> Changes to this register only become effective after `control-measurements`.
+
    Returns the given I2C bus.
 
    Throws an IOException if an error occurs during writing.
@@ -331,11 +333,7 @@
 
    Throws an IOException when an error occurs during one of the reads.
   
-   Cf. `raw-data`
-       `precise-temperature`
-       `pressure`
-       `humidity`
-       `compute`"
+   Cf. `coefficients`"
 
   [bus]
 
@@ -362,31 +360,84 @@
 
 
 
+(defn coefficients
+
+  "Extract coefficients from compensation words.
+  
+   Cf. `compensation-words`"
+
+  [^bytes cw]
+
+  {:T1 (-to-unsigned-short cw 0 1)
+   :T2 (-to-signed-short-8 cw 2 3)
+   :T3 (-to-signed-short-8 cw 4 5)
+   :P1 (-to-unsigned-short cw 6 7)
+   :P2 (-to-signed-short-8 cw 8 9)
+   :P3 (-to-signed-short-8 cw 10 11)
+   :P4 (-to-signed-short-8 cw 12 13)
+   :P5 (-to-signed-short-8 cw 14 15)
+   :P6 (-to-signed-short-8 cw 16 17)
+   :P7 (-to-signed-short-8 cw 18 19)
+   :P8 (-to-signed-short-8 cw 20 21)
+   :P9 (-to-signed-short-8 cw 22 23)
+   :H1 (-to-unsigned-byte  cw 24)
+   :H2 (-to-signed-short-8 cw 25 26)
+   :H3 (-to-unsigned-byte  cw 27)
+   :H4 (-to-signed-short-4 cw 29 28)
+   :H5 (bit-or (bit-shift-right (bit-and (aget cw
+                                               29)
+                                         0xff)
+                                4)
+               (bit-shift-left (aget cw
+                                     30)
+                               4))
+   :H6 (aget cw 31)})
+
+
+
+
 
 (defn raw-data
 
-  "Get pressure, temperature and humidity raw data.
+  "Read 8 bytes representing pressure, temperature and humidity raw data.
 
-   For obtaining the true values, raw data must be adjusted using compensation words.
-  
-   It is best to read everything even if a particular sensor is not needed.
+   Those values have to be adjusted using coefficients.
 
-   Returns a byte array containing 8 bytes.
+   It is best to read everything even if a particular sensor is not needed, hence this is
+   what it does.
+
+   Returns the given or newly created byte array.
   
    Throws an IOException when an error occurs during reading.
   
-   Cf. `compensation-words`
+   Cf. `coefficients`
        `precise-temperature`
        `pressure`
        `humidity`"
 
-  [bus]
+  ([bus]
 
-  (let [ba (byte-array 8)]
-    (i2c/read-bytes bus
-                    0xf7
-                    ba)
-    ba))
+   (let [ba (byte-array 8)]
+     (i2c/read-bytes bus
+                     0xf7
+                     ba)
+     ba))
+
+
+  ([bus ba offset]
+
+   (i2c/read-bytes bus
+                   0xf7
+                   ba
+                   offset
+                   8)
+   ba)
+
+  ([bus ba]
+
+   (raw-data bus
+             ba
+             0)))
 
 
 
@@ -400,7 +451,7 @@
 
    This value can then be converted to °C or used for computing pressure and humidity.
 
-   Cf. `compensation-words`
+   Cf. `coefficients`
        `raw-data`
        `to-celcius`
        `pressure`
@@ -408,14 +459,14 @@
   
        Appendix 8.1 in datasheet"
 
-  [^bytes cw ^bytes data]
-
-  (let [;; coefficients
-        T1 (-to-unsigned-short cw 0 1)
-        T2 (-to-signed-short-8 cw 2 3)
-        T3 (-to-signed-short-8 cw 4 5)
-        ;; raw data
-        t  (-to-unsigned-int   data 5 4 3)
+  [{:as   coeffs
+    :keys [T1
+           T2
+           T3]}
+   ^bytes data]
+   
+  (let [t    (-to-unsigned-int   data 5 4 3)
+        ;;   computation
         var1 (* (- (/ t
                       16384)
                    (/ T1
@@ -451,27 +502,27 @@
 
   "Given compensation words and raw data, compute the pressure in Pa.
 
-   Cf. `compensation-words`
+   Cf. `coefficients`
        `raw-data`
        `precise-temperature`
   
        Appendix 8.1 in datasheet"
 
-  [^bytes cw ^bytes data precise-temp]
+  [{:as   coeffs
+    :keys [P1
+           P2
+           P3
+           P4
+           P5
+           P6
+           P7
+           P8
+           P9]}
+   ^bytes data
+   precise-temp]
 
-  (let [;; coefficients
-        P1 (-to-unsigned-short cw 6 7)
-        P2 (-to-signed-short-8 cw 8 9)
-        P3 (-to-signed-short-8 cw 10 11)
-        P4 (-to-signed-short-8 cw 12 13)
-        P5 (-to-signed-short-8 cw 14 15)
-        P6 (-to-signed-short-8 cw 16 17)
-        P7 (-to-signed-short-8 cw 18 19)
-        P8 (-to-signed-short-8 cw 20 21)
-        P9 (-to-signed-short-8 cw 22 23)
-        ;; raw data
-        p  (-to-unsigned-int   data 2 1 0)
-        ;; computation
+  (let [p    (-to-unsigned-int   data 2 1 0)
+        ;;   computation
         var1 (- (/ precise-temp
                    2)
                 64000)
@@ -526,30 +577,24 @@
 
   "Given compensation words and raw data, compute the humidity in %rH.
   
-   Cf. `compensation-words`
+   Cf. `coefficients`
        `raw-data`
        `precise-temperature`
     
        Appendix 8.1 in datasheet"
 
-  [^bytes cw ^bytes data precise-temp]
+  [{:as   coeffs
+    :keys [H1
+           H2
+           H3
+           H4
+           H5
+           H6]}
+   ^bytes data
+   precise-temp]
 
-  (let [;; coefficients
-        H1    (-to-unsigned-byte  cw 24)
-        H2    (-to-signed-short-8 cw 25 26)
-        H3    (-to-unsigned-byte  cw 27)
-        H4    (-to-signed-short-4 cw 29 28)
-        H5    (bit-or (bit-shift-right (bit-and (aget cw
-                                                      29)
-                                                0xff)
-                                       4)
-                      (bit-shift-left (aget cw
-                                            30)
-                                      4))
-        H6    (aget cw 31)
-        ;; raw data
-        h     (-to-unsigned-short data 7 6)
-        ;; computation
+  (let [h     (-to-unsigned-short data 7 6)
+        ;;    computation
         varh  (- precise-temp
                  76800)
         varh  (* (- h
@@ -581,25 +626,26 @@
 
 
 
-(defn compute
+(defn sensors
   
   "Given compensation words and raw data, compute the temperature, the pressure and
    the humidity.
   
-   Cf. `precise-temperature`
+   Cf. `coefficients`
+       `precise-temperature`
        `to-celcius`
        `pressure`
        `humidity`"
 
-  [^bytes cw ^bytes data]
+  [coeffs ^bytes data]
 
-  (let [t (precise-temperature cw
+  (let [t (precise-temperature coeffs
                                data)]
     {:temperature (to-celcius t)
-     :pressure    (pressure cw
+     :pressure    (pressure coeffs
                             data
                             t)
-     :humidity    (humidity cw
+     :humidity    (humidity coeffs
                             data
                             t)}))
 

@@ -11,7 +11,7 @@ Simply add the following dependency to your project :
 
 ## Usage
 
-Read the full [API](https://dvlopt.github.io/doc/bme280.clj/).
+Read the full [API](https://dvlopt.github.io/doc/bme280.clj/index.html).
 
 ```clj
 ;; require lib for using I2C and lib for the sensor
@@ -20,7 +20,8 @@ Read the full [API](https://dvlopt.github.io/doc/bme280.clj/).
 
 
 ;; open the I2C bus
-(def bus (i2c/open "/dev/i2c-1"))
+(def bus
+     (i2c/open "/dev/i2c-1"))
 
 
 ;; select the sensor (with proper address)
@@ -44,10 +45,15 @@ Read the full [API](https://dvlopt.github.io/doc/bme280.clj/).
                                  4))
 
 
+;; each sensor behave a little differently, hence it provides compensation words
+;; for adjusting raw data
+(def coeffs
+     (bme280/coefficients (bme280/compensation-words bus)))
+
+
 ;; read and adjust temperature, pressure and humidity
-(bme280/sensors bus
-                (bme280/compensation-works bus)
-                (bme280/raw-data           bus))
+(bme280/sensors coeffs
+                (bme280/raw-data bus))
 ;; => {:temperature 23.3       ;; °C
 ;;     :pressure    960.3223   ;; Pa
 ;;     :humidity    46.932}    ;; %rH
