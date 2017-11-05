@@ -1,6 +1,6 @@
 (ns bme280.i2c
 
-  "I2C interface for BME280 environmental sensor"
+  "I2C interface for the BME280 environmental sensor."
 
   {:author "Adam Helinski"}
 
@@ -9,12 +9,12 @@
 
 
 
-;;;;;;;;;;
+;;;;;;;;;; Private
 
 
 (defn- -oversampling
 
-  "Get the hex oversampling value from a kw"
+  "Given a number, gets the hex oversampling value."
 
   [^long oversampling]
 
@@ -31,7 +31,7 @@
 
 (defn- -to-unsigned-byte
 
-  "Read a byte from a byte array as an unsigned byte"
+  "Reads a byte from a byte array as an unsigned byte."
 
   [^bytes ba i]
 
@@ -43,7 +43,7 @@
 
 (defn- -to-signed-short
 
-  "Read 2 bytes from a byte array and combine them at bit `n` to form a signed short"
+  "Reads 2 bytes from a byte array and combines them at bit `n` to form a signed short."
 
   [n ^bytes ba i-lsb i-msb]
 
@@ -59,7 +59,7 @@
 
 (defn- -to-signed-short-4
 
-  "Read 4 bits and a byte from a byte array as a signed short"
+  "Reads 4 bits and a byte from a byte array as a signed short."
 
   [^bytes ba i-lsb i-msb]
 
@@ -73,7 +73,7 @@
 
 (defn- -to-signed-short-8
 
-  "Read 2 bytes from a byte array as a signed short"
+  "Reads 2 bytes from a byte array as a signed short."
 
   [^bytes ba i-lsb i-msb]
 
@@ -87,7 +87,7 @@
 
 (defn- -to-unsigned-short
 
-  "Read 2 bytes from a byte array as an unsigned short"
+  "Reads 2 bytes from a byte array as an unsigned short."
 
   [^bytes ba i-lsb i-msb]
 
@@ -104,7 +104,7 @@
 
 (defn- -to-unsigned-int
 
-  "Reads 4 bits and 2 bytes from a byte array as an unsigned int"
+  "Reads 4 bits and 2 bytes from a byte array as an unsigned int."
 
   [^bytes ba i-xlsb i-lsb i-msb]
 
@@ -124,14 +124,21 @@
 
 
 
-;;;;;;;;;;
+;;;;;;;;;; API - IO
 
 
 (defn id
 
-  "Get the chip identification number.
+  "@ bus
+     I2C bus.
+  
+   => Chip identification number.
 
-   Throws an IOException if an error occurs during reading."
+
+   Throws
+  
+     java.io.IOException
+      If an error occurs during reading."
 
   [bus]
 
@@ -143,17 +150,30 @@
 
 (defn status
 
-  "Get the status of the device.
+  "Gets the status of the device.
 
-   Returns a map containing :
+   @ bus
+     I2C bus.
 
-     :running-conversion?  true  when a conversion is running
-                           false when results have been transfered to the data registers
+   => {:running-conversion?
+        true
+          If a conversion is running.
 
-     :copying-NVM?         true  when NVM data are being copied to image registers
-                           false when the copying is done
+        false
+          If results have been transfered to the data registers.
+
+       :copying-NVM?
+        true
+          If NVM data are being copied to image registers.
+
+        false
+          If the copying is done.}
+
   
-   Throws an IOException if an error occurs during reading."
+   Throws
+
+     java.io.IOException
+       If an error occurs during reading."
 
   [bus]
 
@@ -171,11 +191,19 @@
 
 (defn soft-reset
 
-  "Do a soft reset.
+  "Does a soft reset.
 
-   Returns the given I2C bus.
+
+   @ bus
+     I2C bus.
+
+   => `bus`
+
+
+   Throws
   
-   Throws an IOException if an error occurs during writing."
+     java.io.IOException
+       If an error occurs during writing."
 
   [bus]
 
@@ -188,17 +216,26 @@
 
 (defn control-humidity
 
-  "Control oversampling of humidity data.
+  "Controls oversampling of humidity data.
 
    <!> Changes to this register only become effective after `control-measurements`.
 
        Ideally humidity would be part of `control-measurements` but as it is another
        register, hence a separate write, we keep it explicitly separate.
 
-   Returns the given I2C bus.
 
-   Throws an IOException if an error occurs during writing.
+   @ bus
+     I2C bus.
+
+   => `bus`
+
+
+   Throws
   
+     java.io.IOException
+       If an error occurs during writing.
+  
+
    Cf. `control-measurements`
        `configure`"
 
@@ -214,15 +251,24 @@
 
 (defn control-measurements
 
-  "Choose a mode and control oversampling of temperature and pressure data.
-  
-   Mode is one of :
-  
+  "Chooses a mode and control oversampling of temperature and pressure data.
+
+   If the device is currently performing a measurement, execution of mode switching is delayed
+   until the end of the currently running measurement period. Further mode change commands, such
+   as `control-humidity`, are ignored until the mode change command has been executed.
+
+
+   @ bus
+     I2C bus.
+
+   @ mode
+     One of
+
        :sleep
            No operation, all registers accessible, lower power, selected after startup.
 
        :forced
-           Perform one measurement, store results and return to sleep mode. To do another
+           Performs one measurement, store results and return to sleep mode. To do another
            measurement, call this function with forced mode again.
            Recommended for low sampling rate, or \"à la carte\".
 
@@ -230,18 +276,21 @@
            Perpetual cycling of measurements and inactive periods.
            Recommended for high sampling rate.
 
-   If the device is currently performing a measurement, execution of mode switching is delayed
-   until the end of the currently running measurement period. Further mode change commands, such
-   as `control-humidity`, are ignored until the mode change command has been executed.
+   @ oversampling-temperature
+     One of #{0 1 2 4 8 16} where 0 = disabled.
 
-   Oversamplings are one of (where 0 = disable measurement) :
+   @ oversampling-pressure
+     Like @oversampling-temperature.
 
-       #{0 1 2 4 8 16}
+   => `bus`
 
-   Returns the given I2C bus.
+
+   Throws
+    
+     java.io.IOException
+       If an error occurs during writing.
   
-   Throws an IOException if an error occurs during writing.
-  
+
    Cf. `control-humidity`
        `configure`"
 
@@ -264,33 +313,41 @@
 
 (defn configure
 
-  "Configure the inactive duration and the IIR filter.
-
-   The inactive duration is relevant to the normal mode and basically sets the period in milliseconds.
-   Must be one of :
-
-       #{0.5 10 20 62.5 125 250 500 1000}
-
-
-   The internal IIR filter can be configured for when the environmental pressure is subject to many short-term
-   changes such as slamming a door or the wind blowing on the sensor. This will also affect temperature measurements.
-  
-   The value is one of these coefficients :
-
-       coefficient | samples to reach >= 75% of step response
-       ------------------------------------------------------
-          0 (off)  |  1
-          2        |  2
-          4        |  5
-          8        | 11
-         16        | 22
+  "Configures the inactive duration and the IIR filter.
 
    <!> Changes to this register only become effective after `control-measurements`.
 
-   Returns the given I2C bus.
 
-   Throws an IOException if an error occurs during writing.
+   @ bus
+     I2C bus.
+
+   @ inactive-duraction
+     Relevant to the normal mode and basically sets the period in milliseconds.
+     One of #{0.5 10 20 62.5 125 250 500 1000}.
+
+   @ iir-filter
+     The internal IIR filter can be configured for when the environmental pressure is subject to many short-term
+     changes such as slamming a door or the wind blowing on the sensor. This will also affect temperature measurements.
+    
+     The value is one of these coefficients :
+
+         coefficient | samples to reach >= 75% of step response
+         ------------------------------------------------------
+            0 (off)  |  1
+            2        |  2
+            4        |  5
+            8        | 11
+           16        | 22
+
+   => `bus`
+
+
+   Throws
   
+     java.io.IOException
+       If an error occurs during writing.
+  
+
    Cf. `control-humidity`
        `control-measurements`"
   
@@ -324,14 +381,23 @@
 
 (defn compensation-words
 
-  "Get compensation words for all sensors.
+  "Gets compensation words for all sensors.
   
    Each sensing element behaves differently. Hence, raw data from the sensors must be
    calibrated using those compensation words.
 
-   Returns a byte array containing 32 bytes that need to be combined into multi-byte coefficients.
+   
+   @ bus
+     I2C bus.
 
-   Throws an IOException when an error occurs during one of the reads.
+   => Byte array containing 32 bytes that need to be combined into multi-byte coefficients.
+
+
+   Throws
+  
+     java.io.IOException
+       If an error occurs during one of the reads.
+
   
    Cf. `coefficients`"
 
@@ -360,9 +426,66 @@
 
 
 
+(defn raw-data
+
+  "Reads 8 bytes representing pressure, temperature and humidity raw data.
+
+   Those values have to be adjusted using coefficients.
+
+   It is best to read everything even if a particular sensor is not needed, hence this is
+   what it does.
+
+
+   @ bus
+     I2C bus.
+
+   => Given or newly created byte array.
+  
+
+   Throws
+  
+     java.io.IOException
+       If an error occurs during reading.
+
+  
+   Cf. `coefficients`
+       `precise-temperature`
+       `pressure`
+       `humidity`"
+
+  ([bus]
+
+   (let [ba (byte-array 8)]
+     (i2c/read-bytes bus
+                     0xf7
+                     ba)
+     ba))
+
+
+  ([bus ba]
+
+   (raw-data bus
+             ba
+             0))
+
+  ([bus ba offset]
+
+   (i2c/read-bytes bus
+                   0xf7
+                   ba
+                   offset
+                   8)
+   ba))
+
+
+
+
+;;;;;;;;;; API - Computation
+
+
 (defn coefficients
 
-  "Extract coefficients from compensation words.
+  "Extracts coefficients from compensation words.
   
    Cf. `compensation-words`"
 
@@ -391,73 +514,28 @@
                (bit-shift-left (aget cw
                                      30)
                                4))
-   :H6 (aget cw 31)})
-
-
-
-
-
-(defn raw-data
-
-  "Read 8 bytes representing pressure, temperature and humidity raw data.
-
-   Those values have to be adjusted using coefficients.
-
-   It is best to read everything even if a particular sensor is not needed, hence this is
-   what it does.
-
-   Returns the given or newly created byte array.
-  
-   Throws an IOException when an error occurs during reading.
-  
-   Cf. `coefficients`
-       `precise-temperature`
-       `pressure`
-       `humidity`"
-
-  ([bus]
-
-   (let [ba (byte-array 8)]
-     (i2c/read-bytes bus
-                     0xf7
-                     ba)
-     ba))
-
-
-  ([bus ba offset]
-
-   (i2c/read-bytes bus
-                   0xf7
-                   ba
-                   offset
-                   8)
-   ba)
-
-  ([bus ba]
-
-   (raw-data bus
-             ba
-             0)))
-
-
-
-
-;;;;;;;;;;
+   :H6 (aget cw
+             31)})
 
 
 (defn precise-temperature
 
-  "Given compensation words and raw data, compute the \"precise\" temperature.
+  "Computes the \"precise\" temperature.
 
-   This value can then be converted to °C or used for computing pressure and humidity.
+   
+   @ coeffs
+     Cf. `coefficients`
 
-   Cf. `coefficients`
-       `raw-data`
-       `to-celcius`
-       `pressure`
-       `humidity`
-  
-       Appendix 8.1 in datasheet"
+   @ data
+     Cf. `raw-data`
+
+   => Value that can then be converted to °C or used for computing pressure and humidity.
+
+      Cf. `to-celcius`
+          `pressure`
+          `humidity`
+
+          Appendix 8.1 in datasheet"
 
   [{:as   coeffs
     :keys [T1
@@ -486,13 +564,16 @@
 
 (defn to-celcius
 
-  "Convert a precise temperature to °C.
+  "Computes the temperature.
   
-   Cf. `precise-temperature`"
+   @ precise-temp
+     Cf. `precise-temperature`
 
-  [t]
+   => Temperature in celcius."
 
-  (/ t
+  [precise-temp]
+
+  (/ precise-temp
      5120))
 
 
@@ -500,13 +581,22 @@
 
 (defn pressure
 
-  "Given compensation words and raw data, compute the pressure in Pa.
+  "Computes the pressure.
 
-   Cf. `coefficients`
-       `raw-data`
-       `precise-temperature`
+
+   @ coeffs
+     Cf. `coefficients`
+
+   @ data
+     Cf. `raw-data`
+
+   @ precise-temp
+     Cf. `precise-temperature`
+
+   => Pressure in Pa.
+
   
-       Appendix 8.1 in datasheet"
+   Cf. Appendix 8.1 in datasheet"
 
   [{:as   coeffs
     :keys [P1
@@ -575,13 +665,20 @@
 
 (defn humidity
 
-  "Given compensation words and raw data, compute the humidity in %rH.
-  
-   Cf. `coefficients`
-       `raw-data`
-       `precise-temperature`
-    
-       Appendix 8.1 in datasheet"
+  "Computes the humidity.
+
+
+   @ coeffs
+     Cf. `coefficients`
+
+   @ data
+     Cf. `raw-data`
+
+   @ precise-temp
+     Cf. `precise-temperature`
+
+
+   Cf. Appendix 8.1 in datasheet"
 
   [{:as   coeffs
     :keys [H1
@@ -628,8 +725,7 @@
 
 (defn sensors
   
-  "Given compensation words and raw data, compute the temperature, the pressure and
-   the humidity.
+  "Compute the temperature, the pressure and the humidity all at once.
   
    Cf. `coefficients`
        `precise-temperature`
@@ -652,12 +748,12 @@
 
 
 
-;;;;;;;;;;
+;;;;;;;;;; API - Misc
 
 
 (defn measure-typ
 
-  "Compute the typical measurement time in milliseconds given sensor oversamplings"
+  "Computes the typical measurement time in milliseconds given sensor oversamplings."
 
   [o-t o-p o-h]
 
@@ -680,7 +776,7 @@
 
 (defn measure-max
 
-  "Compute the maximum measurement time in milliseconds given sensor oversamplings"
+  "Computes the maximum measurement time in milliseconds given sensor oversamplings."
 
   [o-t o-p o-h]
 
@@ -728,7 +824,7 @@
 
 (defn iir-response-time
 
-  "Compute the response time of the sensors given the measurement rate and taking
+  "Computes the response time of the sensors given the measurement rate and taking
    into account the selected coefficient for the IIR filter.
 
    Cf. `rate`

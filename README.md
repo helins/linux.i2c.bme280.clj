@@ -1,7 +1,9 @@
 # BME280
 
-Easily interact with a [BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
+Easily interact with the popular [BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
 sensor via I2C.
+
+Relies on [Icare](https://github.com/dvlopt/icare), an I2C clojure lib.
 
 ## Installation
 

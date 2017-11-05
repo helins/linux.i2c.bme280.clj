@@ -1,5 +1,5 @@
 (defproject dvlopt/bme280
-            "0.0.0-alpha1"
+            "0.0.0-alpha2"
 
   :description  "Clojure lib for interacting with a BME280 sensor via I2C"
   :url          "https://github.com/dvlopt/bme280.clj"
