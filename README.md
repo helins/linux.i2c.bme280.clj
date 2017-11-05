@@ -9,7 +9,7 @@ Relies on [Icare](https://github.com/dvlopt/icare), an I2C clojure lib.
 
 Simply add the following dependency to your project :
 
-    [dvlopt/bme280 "0.0.0-alpha0"]
+    [dvlopt/bme280 "0.0.0-alpha2"]
 
 ## Usage
 
