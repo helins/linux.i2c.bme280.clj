@@ -1,15 +1,11 @@
 # BME280
 
-Easily interact with the popular [BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
+[![Clojars
+Project](https://img.shields.io/clojars/v/dvlopt/bme280.svg)](https://clojars.org/dvlopt/bme280)
+
+Easily interact with the popular
+[BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
 sensor via I2C.
-
-Relies on [Icare](https://github.com/dvlopt/icare), an I2C clojure lib.
-
-## Installation
-
-Simply add the following dependency to your project :
-
-    [dvlopt/bme280 "0.0.0-alpha2"]
 
 ## Usage
 
