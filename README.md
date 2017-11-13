@@ -5,7 +5,9 @@ Project](https://img.shields.io/clojars/v/dvlopt/bme280.svg)](https://clojars.or
 
 Easily interact with the popular
 [BME280](https://www.bosch-sensortec.com/bst/products/all_products/bme280)
-sensor via I2C.
+sensor via [I²C](https://en.wikipedia.org/wiki/I%C2%B2C).
+
+Relies on [Icare](https://github.com/dvlopt/icare), an I²C clojure library.
 
 ## Usage
 
