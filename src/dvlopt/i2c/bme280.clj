@@ -103,6 +103,13 @@
                :min 0))
 
 
+(s/def ::index
+
+  (s/and int?
+         #(>= %
+              0)))
+
+
 (s/def ::iir-filter
 
   #{0
@@ -160,7 +167,8 @@
 
 (s/def ::registers
 
-  (s/coll-of (s/keys :req [::length
+  (s/coll-of (s/keys :req [::index
+                           ::length
                            ::register])))
 
 
@@ -591,11 +599,14 @@
 
   {:compensation-words   {::length    32
                           ::operation :read
-                          ::registers [{::length   24
+                          ::registers [{::index    0
+                                        ::length   24
                                         ::register 0x88}
-                                       {::length   1
+                                       {::index    24
+                                        ::length   1
                                         ::register 0xa1}
-                                       {::length   7
+                                       {::index    25
+                                        ::length   7
                                         ::register 0xe1}]
                           ::see       `compensation-words}
    :configure            {::length    1

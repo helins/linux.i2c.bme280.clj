@@ -1,5 +1,5 @@
 (defproject dvlopt/i2c.bme280
-            "0.0.0"
+            "0.0.1"
 
   :description "Talk to  BME280 sensors via I2C"
   :url         "https://github.com/dvlopt/i2c.bme280"
