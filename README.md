@@ -40,27 +40,29 @@ Using [dvlopt.i2c](https://github.com/dvlopt/i2c) (without error checking) :
      (::i2c/bus (i2c/open "/dev/i2c-1")))
 
 
-;; Then, select the sensor (with proper address).
+;; Then, select the sensor (with the proper address).
 (i2c/select bus
             0x76)
 
 
-;; Now we can configure the sensor as needed.
-;; Read the API and the datasheet (recommended).
-(i2c/write-byte bus
-                (::bme280/register (:configure bme280/io))
-                (bme280/configure 0
-                                  :1000-ms))
-
-(i2c/write-byte bus
-                (::bme280/register (:control-humidity bme280/io))
-                (bme280/control-humidity :x1))
-
-(i2c/write-byte bus
-                (::bme280/register (:control-measurements bme280/io))
-                (bme280/control-measurements :normal
-                                             :x2
-                                             :x4))
+;; We need to configure our device as needed.
+;; The easiest way is to use the high level function `prepare` which tells us what
+;; we have to do.
+(let [preparation (bme280/prepare {::bme280/iir-filter               0
+                                   ::bme280/mode                     :forced
+                                   ::bme280/oversampling.humidity    :x1
+                                   ::bme280/oversampling.pressure    :x2
+                                   ::bme280/oversampling.temperature :x4
+                                   ::bme280/standby                  :1000-ms})]
+ ;; Let's write the various configuration bytes to the proper registers.
+ ;; Attention, order matters.
+ (doseq [{register ::bme280/register
+          ubyte    ::bme280/ubyte}   (::bme280/configuration.writes preparation)]
+   (i2c/write-byte bus
+                   register
+                   ubyte))
+ ;; Let's sleep util the measure completes.
+ (Thread/sleep (::bme280/duration.max preparation)))
 
 
 ;; We need to read and prepare compensation words for adjusting sensor data later on.
@@ -77,14 +79,7 @@ Using [dvlopt.i2c](https://github.com/dvlopt/i2c) (without error checking) :
                                                    length)))))
 
 
-;; Before reading data, we should wait a bit depending on our configuration
-(Thread/sleep (bme280/duration--with-iir-filter 0
-                                                (bme280/duration--max :x1
-                                                                      :x2
-                                                                      :x4)))
-
-
-;; Everything is ready for reading the sensors when needed
+;; Everything is ready for reading the sensors when needed.
 (def buffer
      (byte-array (::length (:data bme280/io))))
 
@@ -94,7 +89,7 @@ Using [dvlopt.i2c](https://github.com/dvlopt/i2c) (without error checking) :
                 buffer)
 
 
-;; And finally processing this data
+;; And finally processing this data.
 (bme280/data buffer
              cw)
 
