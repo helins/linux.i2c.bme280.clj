@@ -16,7 +16,8 @@
 
   {:author "Adam Helinski"}
   
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [dvlopt.void        :as void]))
 
 
 
@@ -68,6 +69,25 @@
               24)))
 
 
+(s/def ::command
+
+  #{:configure
+    :control-humidity
+    :control-measurements})
+
+
+(s/def ::configuration.write
+
+  (s/keys :req [::command
+                ::register
+                ::ubyte]))
+
+
+(s/def ::configuration.writes
+
+  (s/coll-of ::configuration.write))
+
+
 (s/def ::copying-NVM?
 
   boolean?)
@@ -80,21 +100,40 @@
                 ::temperature]))
 
 
+(s/def ::duration
+
+  (s/double-in :min  0
+               :NaN? false))
+
+
 (s/def ::duration.max
 
-  (s/double-in :max 112.8
-               :min 0))
+  ::duration)
 
 
 (s/def ::duration.typical
 
-  (s/double-in :max 98
-               :min 0))
+  ::duration)
 
-(s/def ::duration.with-iir-filter
 
-  (s/double-in :max 2481.6
-               :min 0))
+(s/def ::durations
+
+  (s/keys :req [::duration.max
+                ::duration.typical]))
+
+
+(s/def ::durations.opts
+
+  (s/merge ::duration.adjustments
+           (s/keys :opt [::oversampling.humidity
+                         ::oversampling.pressure
+                         ::oversampling.temperature])))
+
+
+(s/def ::duration.adjustments
+
+  (s/keys :opt [::iir-filter
+                ::standby]))
 
 
 (s/def ::humidity
@@ -147,7 +186,22 @@
     :x8
     :x16})
 
-      
+
+(s/def ::oversampling.humidity
+
+  ::oversampling)
+
+
+(s/def ::oversampling.pressure
+
+  ::oversampling)
+
+
+(s/def ::oversampling.temperature
+
+::oversampling)     
+
+
 (s/def ::precise-temperature
 
   (s/double-in :max 250000
@@ -209,6 +263,10 @@
 
   (s/double-in :max 85
                :min -40))
+
+
+
+
 
 
 (s/def ::write
@@ -554,6 +612,32 @@
 
 
 
+(s/fdef -standby--ms
+
+  :args (s/cat :standby ::standby)
+  :ret  #{0.5 10 20 62.5 125 250 500 1000})
+
+
+(defn- -standby--ms
+
+  "Converts a standby time into milliseconds."
+
+  [standby]
+
+  (condp identical?
+         standby
+    :0.5-ms  0.5 
+    :10-ms   10
+    :20-ms   20
+    :62.5-ms 62.5
+    :125-ms  125
+    :250-ms  250
+    :500-ms  500
+    :1000-ms 1000))
+
+
+
+
 ;;;;;;;;;; Private - Misc
 
 
@@ -591,6 +675,20 @@
 
 
 ;;;;;;;;;; API - IO
+
+
+(def defaults
+
+  "Defaults values for this namespaces."
+
+  {::iir-filter               0
+   ::mode                     :normal
+   ::oversampling.humidity    :x1
+   ::oversampling.pressure    :x1
+   ::oversampling.temperature :x1
+   ::standby                  :0.5-ms})
+
+
 
 
 (def io
@@ -631,7 +729,7 @@
    :soft-reset           {::length    1
                           ::operation :write
                           ::register  0xe0
-                          ::write     0xb6 }
+                          ::ubyte     0xb6}
    :status               {::length    1
                           ::operation :read
                           ::register  0xf3
@@ -788,12 +886,45 @@
 
 
 
+(declare duration--with-iir-filter
+         duration--with-standby)
+
+
+
+
+(s/fdef duration--adjust
+
+  :args (s/cat :duration ::duration
+               :opts     ::duration.adjustment)
+  :ret  ::duration)
+
+
+(defn duration--adjust
+
+  "Given the duration in milliseconds of a single measure, adjusts for the chosen iir filter and standby time."
+
+  ^double
+
+  [duration opts]
+
+  (+ (duration--with-iir-filter (void/obtain ::iir-filter
+                                             opts
+                                             defaults)
+                                duration)
+     (duration--with-standby (void/obtain ::standby
+                                          opts
+                                          defaults)
+                             duration)))
+
+
+
+
 (s/fdef duration--max
 
-  :args (s/cat :oversampling--humidity    ::oversampling
-               :oversampling--pressure    ::oversampling
-               :oversampling--temperature ::oversampling)
-  :ret  ::duration.max)
+  :args (s/cat :oversampling--humidity    ::oversampling.humidity
+               :oversampling--pressure    ::oversampling.pressure
+               :oversampling--temperature ::oversampling.temperature)
+  :ret  ::duration)
 
 
 (defn duration--max
@@ -826,10 +957,10 @@
 
 (s/fdef duration--typical
 
-  :args (s/cat :oversampling--humidity    ::oversampling
-               :oversampling--pressure    ::oversampling
-               :oversampling--temperature ::oversampling)
-  :ret  ::duration.typical)
+  :args (s/cat :oversampling--humidity    ::oversampling.humidity
+               :oversampling--pressure    ::oversampling.pressure
+               :oversampling--temperature ::oversampling.temperature)
+  :ret  ::duration)
 
 
 (defn duration--typical
@@ -863,16 +994,13 @@
 (s/fdef duration--with-iir-filter
 
   :args (s/cat :iir-filter ::iir-filter
-               :duration   ::duration.max)
-  :ret  ::duration.with-iir-filter)
+               :duration   ::duration)
+  :ret  ::duration)
 
 
 (defn duration--with-iir-filter
 
-  "Adjusts the given duration in milliseconds of a single measure by taking into account the chosen iir filter.
-  
-   Cf. `duration--max`
-       `duration--typical`"
+  "Adjusts the given duration in milliseconds of a single measure by taking into account the chosen iir filter."
 
   ^double
 
@@ -885,6 +1013,68 @@
         4  5
         8 11
        16 22)))
+
+
+
+
+(s/fdef duration--with-standby
+
+  :args (s/cat :standby  ::standby
+               :duration ::duration)
+  :ret ::duration)
+
+
+(defn duration--with-standby
+
+  "Adjusts the given duration in milliseconds of a dingle measure by taking into account the chosen standby time."
+
+  ^double
+
+  [standby ^double duration]
+
+  (+ duration
+     (-standby--ms standby)))
+
+
+
+
+(s/fdef durations
+
+  :args (s/cat :opts (s/? (s/nilable ::durations.opts)))
+  :ret  ::durations)
+
+
+(defn durations
+
+  "Computes the maximal and typical duration in milliseconds of a single measure given oversamplings
+   and adjusting for the chosen iir filter and standby time.
+  
+   This is a higher level function."
+
+  ([]
+
+   (durations nil))
+
+
+  ([opts]
+
+   (let [oversampling--humidity    (void/obtain ::oversampling.humidity
+                                                opts
+                                                defaults)
+         oversampling--pressure    (void/obtain ::oversampling.pressure
+                                                opts
+                                                defaults)
+         oversampling--temperature (void/obtain ::oversampling.temperature
+                                                opts
+                                                defaults)]
+     {::duration.max     (duration--adjust (duration--max oversampling--humidity
+                                                          oversampling--pressure
+                                                          oversampling--temperature)
+                                           opts)
+      ::duration.typical (duration--adjust (duration--typical oversampling--humidity
+                                                              oversampling--pressure
+                                                              oversampling--temperature)
+                                           opts)})))
 
 
 
@@ -977,6 +1167,76 @@
                       250000
                       (+ var1
                          var2))))
+
+
+
+
+(s/fdef prepare
+
+  :args (s/cat :opts (s/? (s/nilable (s/merge ::durations.opts
+                                              (s/keys :opt [::mode])))))
+  :ret  (s/merge ::durations
+                 (s/keys :req [::iir-filter
+                               ::mode
+                               ::oversampling.humidity
+                               ::oversampling.pressure
+                               ::oversampling.temperature
+                               ::standby
+                               ::configuration.writes])))
+
+
+
+
+(defn prepare
+
+  "Given options, prepares what is needed for configuring the sensors and provides additional
+   information such as the duration in milliseconds of a single measure."
+
+  ([]
+
+   (prepare nil))
+
+
+  ([opts]
+
+   (let [iir-filter                (void/obtain ::iir-filter
+                                                opts
+                                                defaults)
+         mode                      (void/obtain ::mode
+                                                opts
+                                                defaults)
+         oversampling--humidity    (void/obtain ::oversampling.humidity
+                                                opts
+                                                defaults)
+         oversampling--pressure    (void/obtain ::oversampling.pressure
+                                                opts
+                                                defaults)
+         oversampling--temperature (void/obtain ::oversampling.temperature
+                                                opts
+                                                defaults)
+         standby                   (void/obtain ::standby
+                                                opts
+                                                defaults)]
+     (merge (durations opts)
+            {::iir-filter               iir-filter
+             ::mode                     mode
+             ::oversampling.humidity    oversampling--humidity
+             ::oversampling.pressure    oversampling--pressure
+             ::oversampling.temperature oversampling--temperature
+             ::standby                  standby
+             ::configuration.writes     [{::command  :configure
+                                          ::register (::register (:configure io))
+                                          ::ubyte    (configure iir-filter
+                                                                standby)}
+                                         {::command  :control-humidity
+                                          ::register (::register (:control-humidity io))
+                                          ::ubyte    (control-humidity oversampling--humidity)}
+                                         {::command  :control-measurements
+                                          ::register (::register (:control-measurements io))
+                                          ::ubyte    (control-measurements mode
+                                                                           oversampling--pressure
+                                                                           oversampling--temperature)}]}))))
+
 
 
 
