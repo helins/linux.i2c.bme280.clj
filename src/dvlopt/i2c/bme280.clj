@@ -792,6 +792,8 @@
 
   "Prepares a byte for configuring the iir filter and the standby time.
   
+   Attention, this configuration will not become active before the `control-measurements` byte is written.
+
    Cf. (:configure io)"
   
   [^long iir-filter standby]
@@ -815,6 +817,8 @@
 (defn control-humidity
 
   "Prepares a byte for configuring humidity.
+
+   Attention, this configuration will not become active before the `control-measurements` byte is written.
   
    Cf. (:control-humidity io)"
 
@@ -836,6 +840,9 @@
 (defn control-measurements
 
   "Prepares a byte for configuring the mode, the pressure and the temperature.
+
+   Attention, this must be written AFTER `configure` and `control-humidity` if those need to be
+   modified.
   
    Cf. (:control-measurements io)"
 
