@@ -9,8 +9,8 @@
             [clojure.test.check.generators   :as tgen]
             [clojure.test.check.properties   :as tprop]
             [criterium.core                  :as ct]
-            [dvlopt.i2c                      :as i2c]
-            [dvlopt.i2c.bme280               :as bme280]
+            [dvlopt.linux.i2c                :as i2c]
+            [dvlopt.linux.i2c.bme280         :as bme280]
             [dvlopt.void                     :as void]))
 
 
