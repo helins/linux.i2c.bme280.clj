@@ -19,15 +19,6 @@
 ;;;;;;;;;;
 
 
-(set! *warn-on-reflection*
-      true)
-
-
-
-
-;;;;;;;;;;
-
-
 (comment
 
   
