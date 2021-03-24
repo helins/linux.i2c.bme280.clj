@@ -25,18 +25,18 @@
 
   "Defaults values for options and keys used throughout this namespace."
 
-  {::iir-filter               0
-   ::mode                     :normal
-   ::oversampling.humidity    :x1
-   ::oversampling.pressure    :x1
-   ::oversampling.temperature :x1
-   ::standby                  :0.5-ms})
+  {:bme280/iir-filter               0
+   :bme280/mode                     :normal
+   :bme280/oversampling.humidity    :x1
+   :bme280/oversampling.pressure    :x1
+   :bme280/oversampling.temperature :x1
+   :bme280/standby                  :0.5-ms})
 
 
 
 (defn- -obtain
 
-  ;; Gets a provided value or retrieve the corresponding default one.
+  ;; Gets a provided value or retrieves the corresponding default one.
 
   [hmap k]
 
@@ -319,24 +319,24 @@
 
   ([configuration]
 
-   (let [iir-filter                (case ^long (-obtain ::iir-filter
+   (let [iir-filter                (case ^long (-obtain :bme280/iir-filter
                                                         configuration)
                                       0  1
                                       2  2
                                       4  5
                                       8 11
                                      16 22)
-         oversampling--humidity    (-oversampling->multiplier (-obtain ::oversampling.humidity
+         oversampling--humidity    (-oversampling->multiplier (-obtain :bme280/oversampling.humidity
                                                                        configuration))
-         oversampling--pressure    (-oversampling->multiplier (-obtain ::oversampling.pressure
+         oversampling--pressure    (-oversampling->multiplier (-obtain :bme280/oversampling.pressure
                                                                        configuration))
-         oversampling--temperature (-oversampling->multiplier (-obtain ::oversampling.temperature
+         oversampling--temperature (-oversampling->multiplier (-obtain :bme280/oversampling.temperature
                                                                        configuration))
          standby                   (condp identical?
-                                          (-obtain ::mode
+                                          (-obtain :bme280/mode
                                                    configuration)
                                      :forced 0
-                                     :normal (-standby->ms (-obtain ::standby
+                                     :normal (-standby->ms (-obtain :bme280/standby
                                                                     configuration)))]
      (reduce (fn add-duration [hmap [k f]]
                (assoc hmap
@@ -365,10 +365,10 @@
   (let [;; The first bit is for enabling 3-wire SPI instead of 4-wire but since we use
         ;; I2C, we do not care.
 
-        b (bit-or (bit-shift-left (-iir-filter->byte (-obtain ::iir-filter
+        b (bit-or (bit-shift-left (-iir-filter->byte (-obtain :bme280/iir-filter
                                                               configuration))
                                   1)
-                  (bit-shift-left (-standby->byte (-obtain ::standby
+                  (bit-shift-left (-standby->byte (-obtain :bme280/standby
                                                            configuration))
                                   4))]
     (i2c/write bus
@@ -386,7 +386,7 @@
 
   (i2c/write bus
              [0xf2
-              (-oversampling->byte (-obtain ::oversampling.humidity
+              (-oversampling->byte (-obtain :bme280/oversampling.humidity
                                             configuration))])
   nil)
 
@@ -399,12 +399,12 @@
 
   [bus configuration]
 
-  (let [b (bit-or (-mode->byte (-obtain ::mode
+  (let [b (bit-or (-mode->byte (-obtain :bme280/mode
                                         configuration))
-                  (bit-shift-left (-oversampling->byte (-obtain ::oversampling.pressure
+                  (bit-shift-left (-oversampling->byte (-obtain :bme280/oversampling.pressure
                                                                 configuration))
                                   2)
-                  (bit-shift-left (-oversampling->byte (-obtain ::oversampling.temperature
+                  (bit-shift-left (-oversampling->byte (-obtain :bme280/oversampling.temperature
                                                                 configuration))
                                   5))]
     (i2c/write bus
@@ -420,7 +420,7 @@
 
    The configuration map may have the following options :
 
-     ::iir-filter
+     :bme280/iir-filter
 
        The internal IIR filter can be configured for when the environmental pressure is subject to many short-term
        changes such as slamming a door or the wind blowing on the sensor. This will also affect temperature measurements.
@@ -435,7 +435,7 @@
               8        | 11
              16        | 22
 
-     ::mode
+     :bme280/mode
 
        Mode is one of :
   
@@ -454,15 +454,15 @@
        If the device is currently performing a measurement, execution of mode switching is delayed
        until the end of the currently running measurement period.
 
-     ::oversampling.humidity
-     ::oversampling.pressure
-     ::oversampling.temperature
+     :bme280/oversampling.humidity
+     :bme280/oversampling.pressure
+     :bme280/oversampling.temperature
 
        Oversamplings are one of (where 0 = disable measurement) :
 
            #{:x0 :x1 :x2 :x4 :x8 :x16}
 
-     ::standby
+     :bme280/standby
 
        Inactive duration period between 2 measurements, relevant for the :normal mode, in milliseconds.
        Must be one of :
@@ -511,60 +511,60 @@
                    [[0x88 24]
                     [0xa1  1]
                     [0xe1  7]])]
-    {::H1 (nth bs
-               24)
-     ::H2 (-short--8 bs
-                     25
-                     26)
-     ::H3 (nth bs
-               27)
-     ::H4 (-short--4 bs
-                     29
-                     28)
-     ::H5 (bit-or (bit-shift-right (nth bs
-                                        29)
-                                   4)
-                  (bit-shift-left (nth bs
-                                       30)
-                                  4))
-     ::H6 (unchecked-byte (nth bs
-                               31))
-     ::P1 (-ushort bs
-                   6
-                   7)
-     ::P2 (-short--8 bs
-                     8
-                     9)
-     ::P3 (-short--8 bs
-                     10
-                     11)
-     ::P4 (-short--8 bs
-                     12
-                     13)
-     ::P5 (-short--8 bs
-                     14
-                     15)
-     ::P6 (-short--8 bs
-                     16
-                     17)
-     ::P7 (-short--8 bs
-                     18
-                     19)
-     ::P8 (-short--8 bs
-                     20
-                     21)
-     ::P9 (-short--8 bs
-                     22
-                     23)
-     ::T1 (-ushort bs
-                   0
-                   1)
-     ::T2 (-short--8 bs
-                     2
-                     3)
-     ::T3 (-short--8 bs
-                     4
-                     5)}))
+    {:bme280/H1 (nth bs
+                     24)
+     :bme280/H2 (-short--8 bs
+                           25
+                           26)
+     :bme280/H3 (nth bs
+                     27)
+     :bme280/H4 (-short--4 bs
+                           29
+                           28)
+     :bme280/H5 (bit-or (bit-shift-right (nth bs
+                                              29)
+                                         4)
+                        (bit-shift-left (nth bs
+                                             30)
+                                        4))
+     :bme280/H6 (unchecked-byte (nth bs
+                                     31))
+     :bme280/P1 (-ushort bs
+                         6
+                         7)
+     :bme280/P2 (-short--8 bs
+                           8
+                           9)
+     :bme280/P3 (-short--8 bs
+                           10
+                           11)
+     :bme280/P4 (-short--8 bs
+                           12
+                           13)
+     :bme280/P5 (-short--8 bs
+                           14
+                           15)
+     :bme280/P6 (-short--8 bs
+                           16
+                           17)
+     :bme280/P7 (-short--8 bs
+                           18
+                           19)
+     :bme280/P8 (-short--8 bs
+                           20
+                           21)
+     :bme280/P9 (-short--8 bs
+                           22
+                           23)
+     :bme280/T1 (-ushort bs
+                         0
+                         1)
+     :bme280/T2 (-short--8 bs
+                           2
+                           3)
+     :bme280/T3 (-short--8 bs
+                           4
+                           5)}))
 
 
 
@@ -580,12 +580,12 @@
   (let [h     (-ushort raw-data
                        7
                        6)
-        H1    (::H1 compensation-words)
-        H2    (::H2 compensation-words)
-        H3    (::H3 compensation-words)
-        H4    (::H4 compensation-words)
-        H5    (::H5 compensation-words)
-        H6    (::H6 compensation-words)
+        H1    (:bme280/H1 compensation-words)
+        H2    (:bme280/H2 compensation-words)
+        H3    (:bme280/H3 compensation-words)
+        H4    (:bme280/H4 compensation-words)
+        H5    (:bme280/H5 compensation-words)
+        H6    (:bme280/H6 compensation-words)
         ;;    computation
         varh  (- precise-temperature
                  76800)
@@ -627,15 +627,15 @@
                     2
                     1
                     0)
-        P1   (::P1 compensation-words)
-        P2   (::P2 compensation-words)
-        P3   (::P3 compensation-words)
-        P4   (::P4 compensation-words)
-        P5   (::P5 compensation-words)
-        P6   (::P6 compensation-words)
-        P7   (::P7 compensation-words)
-        P8   (::P8 compensation-words)
-        P9   (::P9 compensation-words)
+        P1   (:bme280/P1 compensation-words)
+        P2   (:bme280/P2 compensation-words)
+        P3   (:bme280/P3 compensation-words)
+        P4   (:bme280/P4 compensation-words)
+        P5   (:bme280/P5 compensation-words)
+        P6   (:bme280/P6 compensation-words)
+        P7   (:bme280/P7 compensation-words)
+        P8   (:bme280/P8 compensation-words)
+        P9   (:bme280/P9 compensation-words)
         ;;   computation
         var1 (- (/ precise-temperature
                    2)
@@ -702,9 +702,9 @@
                     5
                     4
                     3)
-        T1   (::T1 compensation-words)
-        T2   (::T2 compensation-words)
-        T3   (::T3 compensation-words)
+        T1   (:bme280/T1 compensation-words)
+        T2   (:bme280/T2 compensation-words)
+        T3   (:bme280/T3 compensation-words)
         ;;   computation
         var1 (* (- (/ t
                       16384)
@@ -747,9 +747,9 @@
 
    Returns a map containing :
 
-     ::humidity    in %rH
-     ::pressure    in Pa
-     ::temperature in °C
+     :bme280/humidity    in %rH
+     :bme280/pressure    in Pa
+     :bme280/temperature in °C
 
   
    Cf. `compensation-words`"
@@ -763,13 +763,13 @@
                                         8))
         precise-temperature (-precise-temperature raw-data
                                                   compensation-words)]
-    {::humidity    (-humidity raw-data
-                              compensation-words
-                              precise-temperature)
-     ::pressure    (-pressure raw-data
-                              compensation-words
-                              precise-temperature)
-     ::temperature (-temperature precise-temperature)}))
+    {:bme280/humidity    (-humidity raw-data
+                                    compensation-words
+                                    precise-temperature)
+     :bme280/pressure    (-pressure raw-data
+                                    compensation-words
+                                    precise-temperature)
+     :bme280/temperature (-temperature precise-temperature)}))
 
 
 
@@ -794,8 +794,8 @@
 
   "Retrieves the current status of the slave and returns a map containing
 
-     ::copying-nvm?         True when NVM data is being copied to image registers.
-     ::running-conversion?  True when a conversion is currently running."
+     :bme280/copying-nvm?         True when NVM data is being copied to image registers.
+     :bme280/running-conversion?  True when a conversion is currently running."
 
   [bus]
 
@@ -803,7 +803,7 @@
              [0xf3])
   (let [b (first (i2c/read bus
                            1))]
-    {::copying-NVM?        (bit-test b
-                                     0)
-     ::running-conversion? (bit-test b
-                                     3)}))
+    {:bme280/copying-NVM?        (bit-test b
+                                           0)
+     :bme280/running-conversion? (bit-test b
+                                           3)}))

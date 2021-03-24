@@ -10,6 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Namespaced parameters under "bme280"
+- Relicensed under MPL 2.0
+- Rename group id to "io.helins"
+
 ### Fixed
 
 
