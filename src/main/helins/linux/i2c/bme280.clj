@@ -1,4 +1,9 @@
-(ns dvlopt.linux.i2c.bme280
+;; This Source Code Form is subject to the terms of the Mozilla Public
+;; License, v. 2.0. If a copy of the MPL was not distributed with this
+;; file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+
+(ns helins.linux.i2c.bme280
 
   "Interface for talking to BME280 sensors via I2C.
 
@@ -6,20 +11,17 @@
 
    Relies on :
   
-     https://github.com/dvlopt/linux.i2c.clj"
+     https://github.com/helins/linux.i2c.clj"
 
   {:author "Adam Helinski"}
   
-  (:require [dvlopt.linux.i2c :as i2c]
-            [dvlopt.void      :as void]))
+  (:require [helins.linux.i2c :as i2c]))
 
 
+;;;;;;;;;; Miscellaneous
 
 
-;;;;;;;;;; Misc
-
-
-(def defaults
+(def default+
 
   "Defaults values for options and keys used throughout this namespace."
 
@@ -30,6 +32,18 @@
    ::oversampling.temperature :x1
    ::standby                  :0.5-ms})
 
+
+
+(defn- -obtain
+
+  ;; Gets a provided value or retrieve the corresponding default one.
+
+  [hmap k]
+
+  (or (get hmap
+           k)
+      (get default+
+           k)))
 
 
 
@@ -305,31 +319,25 @@
 
   ([configuration]
 
-   (let [iir-filter                (case ^long (void/obtain ::iir-filter
-                                                            configuration
-                                                            defaults)
+   (let [iir-filter                (case ^long (-obtain ::iir-filter
+                                                        configuration)
                                       0  1
                                       2  2
                                       4  5
                                       8 11
                                      16 22)
-         oversampling--humidity    (-oversampling->multiplier (void/obtain ::oversampling.humidity
-                                                                           configuration
-                                                                           defaults))
-         oversampling--pressure    (-oversampling->multiplier (void/obtain ::oversampling.pressure
-                                                                           configuration
-                                                                           defaults))
-         oversampling--temperature (-oversampling->multiplier (void/obtain ::oversampling.temperature
-                                                                          configuration
-                                                                           defaults))
+         oversampling--humidity    (-oversampling->multiplier (-obtain ::oversampling.humidity
+                                                                       configuration))
+         oversampling--pressure    (-oversampling->multiplier (-obtain ::oversampling.pressure
+                                                                       configuration))
+         oversampling--temperature (-oversampling->multiplier (-obtain ::oversampling.temperature
+                                                                       configuration))
          standby                   (condp identical?
-                                          (void/obtain ::mode
-                                                       configuration
-                                                       defaults)
+                                          (-obtain ::mode
+                                                   configuration)
                                      :forced 0
-                                     :normal (-standby->ms (void/obtain ::standby
-                                                                        configuration
-                                                                        defaults)))]
+                                     :normal (-standby->ms (-obtain ::standby
+                                                                    configuration)))]
      (reduce (fn add-duration [hmap [k f]]
                (assoc hmap
                       k
@@ -357,13 +365,11 @@
   (let [;; The first bit is for enabling 3-wire SPI instead of 4-wire but since we use
         ;; I2C, we do not care.
 
-        b (bit-or (bit-shift-left (-iir-filter->byte (void/obtain ::iir-filter
-                                                                  configuration
-                                                                  defaults))
+        b (bit-or (bit-shift-left (-iir-filter->byte (-obtain ::iir-filter
+                                                              configuration))
                                   1)
-                  (bit-shift-left (-standby->byte (void/obtain ::standby
-                                                               configuration
-                                                               defaults))
+                  (bit-shift-left (-standby->byte (-obtain ::standby
+                                                           configuration))
                                   4))]
     (i2c/write bus
                [0xf5 b]))
@@ -379,9 +385,9 @@
   [bus configuration]
 
   (i2c/write bus
-             [0xf2 (-oversampling->byte (void/obtain ::oversampling.humidity
-                                                     configuration
-                                                     defaults))])
+             [0xf2
+              (-oversampling->byte (-obtain ::oversampling.humidity
+                                            configuration))])
   nil)
 
 
@@ -393,16 +399,13 @@
 
   [bus configuration]
 
-  (let [b (bit-or (-mode->byte (void/obtain ::mode
-                                            configuration
-                                            defaults))
-                  (bit-shift-left (-oversampling->byte (void/obtain ::oversampling.pressure
-                                                                    configuration
-                                                                    defaults))
+  (let [b (bit-or (-mode->byte (-obtain ::mode
+                                        configuration))
+                  (bit-shift-left (-oversampling->byte (-obtain ::oversampling.pressure
+                                                                configuration))
                                   2)
-                  (bit-shift-left (-oversampling->byte (void/obtain ::oversampling.temperature
-                                                                    configuration
-                                                                    defaults))
+                  (bit-shift-left (-oversampling->byte (-obtain ::oversampling.temperature
+                                                                configuration))
                                   5))]
     (i2c/write bus
                [0xf4 b]))
