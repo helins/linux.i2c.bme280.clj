@@ -10,11 +10,17 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+### Fixed
+
+
+
+## [2.0.0-beta0] - 2020-03-24
+
+### Changed
+
 - Namespaced parameters under "bme280"
 - Relicensed under MPL 2.0
 - Rename group id to "io.helins"
-
-### Fixed
 
 
 
@@ -23,6 +29,10 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - New, improved API
+
+### Removed
+
+- Specs (as they are useless)
 
 
 
@@ -59,7 +69,8 @@ All notable changes to this project will be documented in this file.
 
 
 
-[Unreleased]: https://github.com/helins/linux.i2c.bme280.clj/compare/1.0.0-beta0...HEAD
+[Unreleased]: https://github.com/helins/linux.i2c.bme280.clj/compare/2.0.0-beta0...HEAD
+[2.0.0-beta0]: https://github.com/helins/linux.i2c.bme280.clj/compare/1.0.0-beta0...2.0.0-beta0
 [1.0.0-beta0]: https://github.com/helins/linux.i2c.bme280.clj/compare/0.0.3...1.0.0-beta0
 [0.0.3]: https://github.com/helins/linux.i2c.bme280.clj/compare/0.0.2...0.0.3
 [0.0.2]: https://github.com/helins/linux.i2c.bme280.clj/compare/0.0.1...0.0.2
